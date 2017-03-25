@@ -20,13 +20,16 @@ public class Servidor {
     private static final int PORT = 1978;
     
     //Numero maximo de conexiones
-    private static final int MAX_CONEXIONES=10;
+    private static final int MAX_CONEXIONES=3;
     
     //Numero actual de conexiones
     private static int conexiones = 0;
     
     //Tamanio buffer
     private static final int BUFFER=10;
+    
+    //Tiempo en segundos de timeout
+    public static int TIMEOUT=0;
     
     
     /**
@@ -48,7 +51,8 @@ public class Servidor {
             } catch (IOException e) {
                 System.out.println("I/O error: " + e);
             }
-            if(conexiones <= MAX_CONEXIONES){
+
+            if(conexiones < MAX_CONEXIONES){
                 new Conexion(socket, false).start();
             }  
             else{
