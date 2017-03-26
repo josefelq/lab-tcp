@@ -5,8 +5,8 @@
  */
 package servidor;
 
-import static com.sun.xml.internal.ws.model.RuntimeModeler.PORT;
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 
@@ -26,10 +26,13 @@ public class Servidor {
     private static int conexiones = 0;
     
     //Tamanio buffer
-    private static final int BUFFER=10;
+    public static final int BUFFER=40000;
     
     //Tiempo en segundos de timeout
     public static int TIMEOUT=0;
+    
+    //Tamanio fragmento
+    public static int FRAGMENTO=8000;
     
     
     /**
@@ -40,7 +43,10 @@ public class Servidor {
         Socket socket = null;
 
         try {
-            serverSocket = new ServerSocket(PORT);
+            serverSocket = new ServerSocket();
+            //Primer valor: Tiempo conexion, Segundo valor: Latencia. Tercer valor: banda de ancha.
+            serverSocket.setPerformancePreferences(1, 1, 1);
+            serverSocket.bind(new InetSocketAddress(1978));
         } catch (IOException e) {
             e.printStackTrace();
 
