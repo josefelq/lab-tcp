@@ -99,6 +99,7 @@ public class Cliente extends Thread{
         br.close();
         out.close();
         System.out.println("Disconnected");
+        
     }
 
     public void sendDesiredFile(String s) throws IOException {
@@ -122,10 +123,10 @@ public class Cliente extends Thread{
         PrintWriter p = new PrintWriter(out, true);
         p.println("SEND");
         DataInputStream dis = new DataInputStream(socket.getInputStream());
-        int off = currentPos*fragmento;
-        int len = (int) Math.min(fragmento, totalBytes-off);
-	byte[] data = new byte[len];
-	dis.read(data, 0, len);
+        int offset = currentPos*fragmento;
+        int length = (int) Math.min(fragmento, totalBytes-offset);
+	byte[] data = new byte[length];
+	dis.read(data, 0, length);
 	fos.write(data);
 	fos.flush();
 	System.out.println("PACKET "+(currentPos+1)+": "+data.toString());
