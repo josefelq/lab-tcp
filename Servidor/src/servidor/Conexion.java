@@ -15,8 +15,11 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintWriter;
+import java.io.RandomAccessFile;
 import java.net.Socket;
 import java.net.SocketException;
+import java.nio.channels.FileChannel;
+import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -99,25 +102,10 @@ public class Conexion extends Thread {
 
     private void handleMessage(String s) throws IOException {
         
-        
-
         if (s.startsWith("FILE")) {
-            currentPos = 0;
-            fullFile = loadFile("./files/"+s.split(";")[1]);
-            PrintWriter p = new PrintWriter(out, true);
-            p.println("READY");
-        } else if (s.equalsIgnoreCase("OK")) {
-            System.out.println("sending files");
-            PrintWriter p = new PrintWriter(out, true);
-            if (sendBytes(fullFile)) {
-                p.println("READY");
-            } else {
-                p.println("FINISHED");
-            }
-        } else if (s.equalsIgnoreCase("THANKS")) {
-            currentPos = 0;
-            fullFile = null;
-        } else if (s.equalsIgnoreCase("OPTIONS")) {
+            initFile(s.split(";")[1]);
+        }
+        else if (s.equalsIgnoreCase("OPTIONS")) {
             
             sendOptions();
         }
@@ -125,6 +113,9 @@ public class Conexion extends Thread {
             socket.close();
             Servidor.reducirConexiones();
             return;
+        }
+        else if(s.equalsIgnoreCase("SEND")){
+            sendBytes(fullFile);
         }
 
     }
@@ -152,7 +143,7 @@ public class Conexion extends Thread {
     }
 
     public static byte[] readFully(InputStream stream) throws IOException {
-        byte[] buffer = new byte[8192];
+        byte[] buffer = new byte[1024];
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
 
         int bytesRead;
@@ -182,44 +173,39 @@ public class Conexion extends Thread {
             throw new IndexOutOfBoundsException("Out of bounds: " + start);
         }
 
-        out.writeInt(len);
+        
+        //out.writeInt(len);
         if (len > 0) {
             out.write(myByteArray, start, len);
             out.flush();
         }
     }
 
-    public boolean sendBytes(byte[] myByteArray) throws IOException {
+    public void sendBytes(byte[] myByteArray) throws IOException {
         if (currentPos + Servidor.FRAGMENTO < fullFile.length) {
             sendBytes(myByteArray, currentPos, currentPos + Servidor.FRAGMENTO);
             currentPos += Servidor.FRAGMENTO;
 
         } else {
             sendBytes(myByteArray, currentPos, fullFile.length);
-            return true;
         }
-
-        return false;
-
     }
 
-    public String sendPacket() {
-        String v = "";
-        if (currentPos + Servidor.FRAGMENTO < fullFile.length) {
-            byte[] subArray = Arrays.copyOfRange(fullFile, currentPos, currentPos + Servidor.FRAGMENTO);
-            v = "PACKET;" + subArray.toString();
-        } else if (currentPos + Servidor.FRAGMENTO >= fullFile.length && currentPos < fullFile.length) {
-            byte[] subArray = Arrays.copyOfRange(fullFile, currentPos, fullFile.length);
-            v = "PACKET;" + subArray.toString();
-        } else {
-            PrintWriter p = new PrintWriter(out, true);
-            p.println("FINISHED");
+
+    
+    public void initFile(String file) throws IOException{
+        currentPos=0;
+        fullFile=loadFile("./files/"+file);
+	long bytes = fullFile.length;
+	int packets = (int) (bytes/Servidor.FRAGMENTO);
+	if (bytes%Servidor.FRAGMENTO>0){
+            packets++;
         }
-        currentPos += Servidor.FRAGMENTO;
-        System.out.println(v);
-
-        return v;
-
+        PrintWriter pw = new PrintWriter(out, true);
+	pw.println("PACKETS;"+packets);
+	pw.println("BYTES;"+bytes);
+	pw.println("FRAGMENTO;"+Servidor.FRAGMENTO);
+    
     }
 
 }

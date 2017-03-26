@@ -29,7 +29,7 @@ public class Servidor {
     public static final int BUFFER=40000;
     
     //Tiempo en segundos de timeout
-    public static int TIMEOUT=0;
+    public static int TIMEOUT=120;
     
     //Tamanio fragmento
     public static int FRAGMENTO=8000;

@@ -15,9 +15,11 @@ public class Main {
     
     public static void main(String[] args) throws IOException{
         Cliente c=new Cliente();
+        c.start();
         c.connect();
-        c.run();
-        
+        c.sendDesiredFile("5mb.pdf");
+        c.download();
+        c.disconnect();
     }
     
 }

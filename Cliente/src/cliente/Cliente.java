@@ -10,6 +10,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -18,13 +19,14 @@ import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
  *
  * @author jose quiroga
  */
-public class Cliente {
+public class Cliente extends Thread{
 
     private Socket socket;
 
@@ -32,54 +34,31 @@ public class Cliente {
 
     private DataOutputStream out;
 
-    private ArrayList<Byte> fileData;
-
     private ArrayList options;
+    
+    private int currentPos;
+    
+    private int numPackets;
+    
+    private long totalBytes;
+    
+    private String repositorio;
+    
+    private int fragmento;
+    
+    private FileOutputStream fos;
+    
+    private boolean pausado;
 
-    public Cliente() {
+    public Cliente(){
+        pausado=false;
+        repositorio="C:\\Users\\Jos\\Music\\example";
         options = new ArrayList();
-        fileData = new ArrayList<Byte>();
     }
-
-    public void run() throws IOException {
-        while (true) {
-            String line;
-            line = br.readLine();
-            handleMessage(line);
+    
+    public void run(){
+        while(true){
         }
-    }
-
-    public void handleMessage(String s) throws IOException {
-
-        System.out.println(s);
-
-        if (s.equalsIgnoreCase("FINISHED")) {
-            byte ar[] = readBytes();
-            addDataToArray(ar);
-            convertByteArrayToDoc(convertToByte(fileData));
-            PrintWriter p = new PrintWriter(out, true);
-            p.println("THANKS");
-        } else if (s.startsWith("READY")) {
-            PrintWriter p = new PrintWriter(out, true);
-            p.println("OK");
-            byte ar[] = readBytes();
-            addDataToArray(ar);
-        } else if (s.startsWith("OPTIONS")) {
-            String[] f = s.split(";");
-            for (int i = 1; i < f.length; i++) {
-                options.add(f[i]);
-            }
-            System.out.println(options.toString());
-        }
-
-    }
-
-    public byte[] convertToByte(ArrayList<Byte> list) {
-        byte[] result = new byte[list.size()];
-        for (int i = 0; i < list.size(); i++) {
-            result[i] = (byte) list.get(i).byteValue();
-        }
-        return result;
     }
 
     public boolean connect() throws IOException {
@@ -92,11 +71,19 @@ public class Cliente {
         String result = br.readLine();
 
         if (result.equalsIgnoreCase("CONNECTED")) {
-            System.out.println("llegamos aca");
+            System.out.println("CONNECTED");
             PrintWriter p = new PrintWriter(out, true);
             p.println("OPTIONS");
+            String line;
+            line = br.readLine();
+            String[] f = line.split(";");
+            for (int i = 1; i < f.length; i++) {
+                options.add(f[i]);
+            }
+            System.out.println(options.toString());
             return true;
         } else {
+            System.out.println("REFUSED");
             socket.close();
             br.close();
             out.close();
@@ -111,13 +98,50 @@ public class Cliente {
         socket.close();
         br.close();
         out.close();
+        System.out.println("Disconnected");
     }
 
-    public void sendDesiredFile(String s) {
+    public void sendDesiredFile(String s) throws IOException {
+        currentPos=0;
         PrintWriter p = new PrintWriter(out, true);
         p.println("FILE;" + s);
+        String pack = br.readLine();
+        String bit = br.readLine();
+        String frag = br.readLine();
+        numPackets = Integer.parseInt(pack.split(";")[1]);
+	totalBytes = Long.parseLong(bit.split(";")[1]);
+        fragmento=Integer.parseInt(frag.split(";")[1]);	
+        File f = new File(repositorio+"\\"+s);
+	f.createNewFile();
+	fos = new FileOutputStream(f);
     }
+    
+    public void download() throws IOException{
+        
+        while(currentPos<numPackets && !pausado){
+        PrintWriter p = new PrintWriter(out, true);
+        p.println("SEND");
+        DataInputStream dis = new DataInputStream(socket.getInputStream());
+        int off = currentPos*fragmento;
+        int len = (int) Math.min(fragmento, totalBytes-off);
+	byte[] data = new byte[len];
+	dis.read(data, 0, len);
+	fos.write(data);
+	fos.flush();
+	System.out.println("PACKET "+(currentPos+1)+": "+data.toString());
+	currentPos++;
+        }
+        
+   
+    }
+    
+    public void pause(){
+        pausado=!pausado;
+    
+    }
+    
 
+    /*
     public byte[] readBytes() throws IOException {
         DataInputStream in = new DataInputStream(socket.getInputStream());
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -146,4 +170,13 @@ public class Cliente {
         }
 
     }
+    
+        public byte[] convertToByte(ArrayList<Byte> list) {
+        byte[] result = new byte[list.size()];
+        for (int i = 0; i < list.size(); i++) {
+            result[i] = (byte) list.get(i).byteValue();
+        }
+        return result;
+    }
+     */
 }
